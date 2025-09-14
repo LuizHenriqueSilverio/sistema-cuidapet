@@ -1,9 +1,13 @@
+import 'dart:io';
+import 'package:intl/intl.dart';
+
 import '../models/carrinho.dart';
+import '../models/cliente.dart';
 import '../models/item_venda.dart';
+import '../models/pet.dart';
 import '../models/produto.dart';
 import '../models/servico.dart';
 import '../utils/console_utils.dart';
-import 'dart:io';
 
 class SistemaAtendimento {
   final List<Produto> _produtos = [
@@ -31,6 +35,7 @@ class SistemaAtendimento {
         min: 0,
         max: 2,
       );
+
       switch (opcao) {
         case 1:
           _executarAtendimentoCliente();
@@ -58,9 +63,11 @@ class SistemaAtendimento {
     final nomeCliente = ConsoleUtils.lerString(
       'Para começar, por favor, digite seu nome: ',
     );
-    print('Olá, $nomeCliente! O que deseja fazer hoje?');
 
-    final carrinho = Carrinho();
+    final cliente = Cliente(nome: nomeCliente);
+    print('Olá, ${cliente.nome}!');
+
+    _cadastrarPet(cliente);
 
     while (true) {
       _exibirMenuCliente();
@@ -71,28 +78,40 @@ class SistemaAtendimento {
       );
 
       if (opcao == 0) {
-        print('Atendimento cancelado. Até a próxima, $nomeCliente!');
+        print('Atendimento cancelado. Até a próxima, ${cliente.nome}!');
         break;
       }
 
       switch (opcao) {
         case 1:
           _listarItensVenda(_produtos, 'Produtos em Promoção');
-          _adicionarItemAoCarrinho(carrinho, [..._produtos, ..._servicos]);
+          _adicionarItemAoCarrinho(cliente, [..._produtos, ..._servicos]);
           break;
         case 2:
           _listarItensVenda(_servicos, 'Serviços Disponíveis');
-          _adicionarItemAoCarrinho(carrinho, [..._produtos, ..._servicos]);
+          _adicionarItemAoCarrinho(cliente, [..._produtos, ..._servicos]);
           break;
         case 3:
-          carrinho.listarItens();
+          cliente.carrinho.listarItens();
           break;
         case 4:
-          if (_finalizarCompra(carrinho, nomeCliente)) {
+          if (_finalizarCompra(cliente)) {
             return;
           }
           break;
       }
+    }
+  }
+
+  void _cadastrarPet(Cliente cliente) {
+    final resposta = ConsoleUtils.lerString(
+      'Deseja cadastrar um pet para este atendimento? (s/n): ',
+    ).toLowerCase();
+    if (resposta == 's') {
+      final nomePet = ConsoleUtils.lerString('Qual o nome do seu pet? ');
+      final racaPet = ConsoleUtils.lerString('E a raça dele(a)? ');
+      cliente.pet = Pet(nome: nomePet, raca: racaPet);
+      print('Pet ${cliente.pet!.nome} cadastrado com sucesso!');
     }
   }
 
@@ -113,10 +132,10 @@ class SistemaAtendimento {
   }
 
   void _adicionarItemAoCarrinho(
-    Carrinho carrinho,
+    Cliente cliente,
     List<ItemVenda> itensDisponiveis,
   ) {
-    if (carrinho.itens.length >= Carrinho.limiteItens) {
+    if (cliente.carrinho.itens.length >= Carrinho.limiteItens) {
       print(
         'Você já atingiu o limite de ${Carrinho.limiteItens} itens no carrinho.',
       );
@@ -129,46 +148,93 @@ class SistemaAtendimento {
 
     try {
       final item = itensDisponiveis.firstWhere((i) => i.codigo == codigo);
-      carrinho.adicionarItem(item);
+      if (cliente.carrinho.adicionarItem(item) &&
+          item is Servico &&
+          cliente.pet != null) {
+        print('Serviço agendado para o pet ${cliente.pet!.nome}.');
+      }
     } catch (e) {
       print('Código de item inválido ou não encontrado.');
     }
   }
 
-  bool _finalizarCompra(Carrinho carrinho, String nomeCliente) {
-    if (carrinho.itens.isEmpty) {
+  bool _finalizarCompra(Cliente cliente) {
+    if (cliente.carrinho.itens.isEmpty) {
       print(
         'Seu carrinho está vazio. Adicione itens antes de finalizar a compra.',
       );
       return false;
     }
 
-    carrinho.listarItens();
-    final total = carrinho.calcularTotal();
-    print('\nTotal da compra: R\$ ${total.toStringAsFixed(2)}');
+    cliente.carrinho.listarItens();
+    final subtotal = cliente.carrinho.calcularTotal();
+    print('\nSubtotal da compra: R\$ ${subtotal.toStringAsFixed(2)}');
 
     final formaPagamento = ConsoleUtils.lerString(
       'Qual a forma de pagamento (dinheiro, cartao)? ',
     ).toLowerCase();
 
-    double valorFinal = total;
+    double desconto = 0.0;
+    double valorFinal = subtotal;
+
     if (formaPagamento == 'dinheiro') {
-      final desconto = total * 0.10;
+      desconto = subtotal * 0.10;
       valorFinal -= desconto;
-      print('Desconto de 10% aplicado para pagamento em dinheiro!');
-      print('Valor com desconto: R\$ ${valorFinal.toStringAsFixed(2)}');
     } else if (formaPagamento != 'cartao') {
       print(
         'Forma de pagamento não reconhecida. Compra finalizada sem desconto.',
       );
     }
 
-    print('\nCompra finalizada com sucesso! Obrigado, $nomeCliente!');
+    _gerarRecibo(
+      cliente: cliente,
+      subtotal: subtotal,
+      desconto: desconto,
+      valorFinal: valorFinal,
+      formaPagamento: formaPagamento,
+    );
 
     _totalClientesAtendidos++;
     _totalFaturado += valorFinal;
 
     return true;
+  }
+
+  void _gerarRecibo({
+    required Cliente cliente,
+    required double subtotal,
+    required double desconto,
+    required double valorFinal,
+    required String formaPagamento,
+  }) {
+    final dataFormatada = DateFormat(
+      'dd/MM/yyyy HH:mm:ss',
+    ).format(DateTime.now());
+
+    print('\n\n======================================');
+    print('          RECIBO - CUIDAPET');
+    print('======================================');
+    print('Data: $dataFormatada');
+    print('Cliente: ${cliente.nome}');
+    if (cliente.pet != null) {
+      print('Pet: ${cliente.pet!.nome} (${cliente.pet!.raca})');
+    }
+    print('--------------------------------------');
+    print('Itens Comprados:');
+    for (var item in cliente.carrinho.itens) {
+      final preco = 'R\$ ${item.preco.toStringAsFixed(2)}'.padLeft(10);
+      print('- ${item.nome.padRight(25)} $preco');
+    }
+    print('--------------------------------------');
+    print('Subtotal:             R\$ ${subtotal.toStringAsFixed(2)}');
+    if (desconto > 0) {
+      print('Desconto (Dinheiro): -R\$ ${desconto.toStringAsFixed(2)}');
+    }
+    print('Forma de Pagamento:   ${formaPagamento.toUpperCase()}');
+    print('======================================');
+    print('TOTAL A PAGAR:        R\$ ${valorFinal.toStringAsFixed(2)}');
+    print('======================================');
+    print('\nObrigado, ${cliente.nome}! Volte sempre!');
   }
 
   void _acessarAreaRestrita() {

@@ -1,3 +1,6 @@
+import 'lib/services/sistema_atendimento.dart';
+
 void main() {
-  print('Hello, Dart!');
+  final sistema = SistemaAtendimento();
+  sistema.iniciar();
 }
