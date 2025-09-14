@@ -1,7 +1,6 @@
 import 'dart:io';
 
 class ConsoleUtils {
-
   static String lerString(String mensagem) {
     String? input;
     do {
@@ -15,24 +14,26 @@ class ConsoleUtils {
   }
 
   static int lerInt({required String mensagem, int? min, int? max}) {
-    int? valor;
-    do {
+    while (true) {
       String input = lerString(mensagem);
       try {
-        valor = int.parse(input);
-        if (min != null && valor < min) {
-          print(' Valor inválido. O número deve ser no mínimo $min.');
-          valor = null;
+        final numero = int.parse(input);
+
+        if (min != null && numero < min) {
+          print('Valor inválido. O número deve ser no mínimo $min.');
+          continue;
         }
-        if (max != null && valor > max) {
-          print(' Valor inválido. O número deve ser no máximo $max.');
-          valor = null;
+
+        if (max != null && numero > max) {
+          print('Valor inválido. O número deve ser no máximo $max.');
+          continue;
         }
+
+        return numero;
       } catch (e) {
-        print(' Entrada inválida. Por favor, digite um número inteiro.');
+        print('Entrada inválida. Por favor, digite um número inteiro.');
       }
-    } while (valor == null);
-    return valor;
+    }
   }
 
   static double lerDouble(String mensagem) {
