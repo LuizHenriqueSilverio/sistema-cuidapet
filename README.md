@@ -26,7 +26,7 @@ Este software foi criado como parte de um projeto acadêmico, com foco na aplica
 
 3.  **Execute a aplicação:**
     ```bash
-    dart run lib/main.dart
+    dart run main.dart
     ```
 
 O sistema será iniciado no seu terminal.
