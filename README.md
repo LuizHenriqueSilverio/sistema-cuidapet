@@ -50,7 +50,7 @@ Ao iniciar o sistema, você terá três opções principais:
 
 ## 📚 Documentação Completa
 
-Para uma visão detalhada da arquitetura, diagramas UML e decisões de projeto, por favor, consulte a **[Wiki do Projeto](link-para-sua-wiki-aqui)**.
+Para uma visão detalhada da arquitetura, diagramas UML e decisões de projeto, por favor, consulte a **[Wiki do Projeto](https://github.com/LuizHenriqueSilverio/sistema-cuidapet/wiki)**.
 
 ## 👥 Créditos
 
